@@ -294,14 +294,14 @@ class DDPG(object):
             })
 
             # Run sanity check. Disabled by default since it slows down things considerably.
-            # print('running sanity check')
-            # target_Q_new, new_mean, new_std = self.sess.run([self.target_Q, self.ret_rms.mean, self.ret_rms.std], feed_dict={
-            #     self.obs1: batch['obs1'],
-            #     self.rewards: batch['rewards'],
-            #     self.terminals1: batch['terminals1'].astype('float32'),
-            # })
-            # print(target_Q_new, target_Q, new_mean, new_std)
-            # assert (np.abs(target_Q - target_Q_new) < 1e-3).all()
+            print('running sanity check')
+            target_Q_new, new_mean, new_std = self.sess.run([self.target_Q, self.ret_rms.mean, self.ret_rms.std], feed_dict={
+                self.obs1: batch['obs1'],
+                self.rewards: batch['rewards'],
+                self.terminals1: batch['terminals1'].astype('float32'),
+            })
+            print(target_Q_new, target_Q, new_mean, new_std)
+            assert (np.abs(target_Q - target_Q_new) < 1e-3).all()
         else:
             target_Q = self.sess.run(self.target_Q, feed_dict={
                 self.obs1: batch['obs1'],

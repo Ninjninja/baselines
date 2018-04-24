@@ -72,7 +72,17 @@ def mujoco_arg_parser():
     Create an argparse.ArgumentParser for run_mujoco.py.
     """
     parser = arg_parser()
-    parser.add_argument('--env', help='environment ID', type=str, default='Reacher-v2')
+    parser.add_argument('--env', help='environment ID', type=str, default='Hopper-v2')
+    parser.add_argument('--seed', help='RNG seed', type=int, default=0)
+    parser.add_argument('--num-timesteps', type=int, default=int(1e6))
+    return parser
+
+def dart_arg_parser():
+    """
+    Create an argparse.ArgumentParser for run_mujoco.py.
+    """
+    parser = arg_parser()
+    parser.add_argument('--env', help='environment ID', type=str, default='DartBlockPush-v1')
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--num-timesteps', type=int, default=int(1e6))
     return parser

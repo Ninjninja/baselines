@@ -55,6 +55,56 @@ class LnLstmPolicy(object):
         self.step = step
         self.value = value
 
+class mlpLstmPolicy(object):
+    def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, nlstm=64, reuse=False):
+        nenv = nbatch // nsteps
+        ndim = ob_space.shape[0]
+        ob_shape = (nbatch, ndim)
+        nact = ac_space.shape[0]
+        X = tf.placeholder(tf.float32, ob_shape) #obs
+        M = tf.placeholder(tf.float32, [nbatch]) #mask (done t-1)
+        S = tf.placeholder(tf.float32, [nenv, nlstm*2]) #states
+        with tf.variable_scope("model", reuse=reuse):
+            # h = nature_cnn(X)
+            logistic_activ = tf.nn.sigmoid
+            activ = tf.nn.relu
+            h = activ(fc(X, 'pi_fc1', nh=64, init_scale=np.sqrt(2)))
+            xs = batch_to_seq(h, nenv, nsteps)
+            ms = batch_to_seq(M, nenv, nsteps)
+            h5, snew = lnlstm(xs, ms, S, 'lstm1', nh=nlstm)
+            h5 = seq_to_batch(h5)
+            pi = fc(h5, 'pi', nact-1)
+            # pred  = 5*logistic_activ(fc(h5, 'pi_p', 1, init_scale=1.0))
+            vf = fc(h5, 'v', 1)[:,0]
+            # pi = tf.concat([pi_act,pred],axis = -1)
+            pred = 5*logistic_activ(fc(h5, 'prediction', 1, init_scale=1.0))
+            logstd = tf.get_variable(name="logstd", shape=[1, nact-1],
+                                 initializer=tf.zeros_initializer())
+
+        pdparam = tf.concat([pi, pi * 0.0 + logstd], axis=1)
+
+        self.pdtype = make_pdtype(ac_space)
+        self.pd = self.pdtype.pdfromflat(pdparam)
+        a0 = self.pd.sample()
+        neglogp0 = self.pd.neglogp(a0)
+        self.initial_state = np.zeros((nenv, nlstm*2), dtype=np.float32)
+
+        def step(ob, state, mask):
+            prediction, a0_out, vf_out, snew_out, neglogp0_out = sess.run([pred,a0, vf, snew, neglogp0], {X: ob, S: state, M: mask})
+            a0_out = np.concatenate([a0_out,prediction])
+            return a0_out, vf_out, snew_out, neglogp0_out, prediction
+
+        def value(ob, state, mask):
+            return sess.run(vf, {X:ob, S:state, M:mask})
+
+        self.X = X
+        self.M = M
+        self.S = S
+        self.pi = pi
+        self.vf = vf
+        self.step = step
+        self.value = value
+
 class LstmPolicy(object):
 
     def __init__(self, sess, ob_space, ac_space, nbatch, nsteps, nlstm=256, reuse=False):
